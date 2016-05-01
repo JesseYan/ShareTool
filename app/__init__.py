@@ -15,6 +15,7 @@ toolapp.config.from_object("config")
 
 m_login_manager = LoginManager()
 m_login_manager.init_app(toolapp)
+m_login_manager.login_view = 'login'
 oid = OpenID(toolapp, os.path.join(basedir, 'tmp'))
 
 db = SQLAlchemy(toolapp)

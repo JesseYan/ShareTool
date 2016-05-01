@@ -8,3 +8,4 @@ Flask study program: MicroBlog web system
 ** Day-2: http://mp.weixin.qq.com/s?__biz=MjM5MDQ1NTA1MQ==&mid=2668591325&idx=1&sn=ef96b24afafe04af5441059e02149b25#rd
 
 
+** Day-3: http://mp.weixin.qq.com/s?__biz=MjM5MDQ1NTA1MQ==&mid=2668591331&idx=1&sn=f0b823a446b5160ca01b177d09fbdc3f#rd

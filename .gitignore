@@ -1,6 +1,6 @@
 .gitignore
-/venv/*
-*.pyc
+./app/*yc
+venv/*
 .idea/
-*.db
-tmp/
+app/database.pyc
+tmp/*

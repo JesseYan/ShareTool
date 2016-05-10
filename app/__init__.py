@@ -8,6 +8,8 @@ from flask_openid import OpenID
 import os
 from config import basedir
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy import create_engine
 
 
 toolapp = Flask(__name__)
@@ -19,5 +21,10 @@ m_login_manager.login_view = 'login'
 oid = OpenID(toolapp, os.path.join(basedir, 'tmp'))
 
 db = SQLAlchemy(toolapp)
+
+engine = create_engine(toolapp.config['SQLALCHEMY_DATABASE_URI'])
+db_session = scoped_session(sessionmaker(autocommit=False,
+                                         autoflush=True,
+                                         bind=engine))
 
 from app import views, models

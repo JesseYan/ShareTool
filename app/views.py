@@ -4,13 +4,14 @@
 
 __author__ = 'jesse'
 
-from app import toolapp, m_login_manager, oid, db, db_session
+from app import toolapp, m_login_manager, oid, db
 from .models import User
 from flask import url_for, g, redirect, session, render_template, flash, request, abort
 from flask_login import login_user, logout_user, current_user, login_required
-from .forms import LoginForm
+from .forms import LoginForm, EditForm
 from openid.extensions import pape
 from app.database import init_db
+from datetime import datetime
 
 
 @toolapp.route('/')
@@ -71,60 +72,60 @@ def after_login(resp):
     return redirect(request.args.get('next') or url_for('index'))
 
 
-@toolapp.route('/create-profile', methods=['GET', 'POST'])
-def create_profile():
-    """If this is the user's first login, the create_or_login function
-    will redirect here so that the user can set up his profile.
-    """
-    if g.user is not None or 'openid' not in session:
-        return redirect(url_for('index'))
-    if request.method == 'POST':
-        name = request.form['name']
-        email = request.form['email']
-        # test_word = ""
-        # avatar_url = User.avatar(128)
-
-        if not name:
-            flash(u'Error: you have to provide a name')
-        elif '@' not in email:
-            flash(u'Error: you have to enter a valid email address')
-        else:
-            flash(u'Profile successfully created')
-            # init_db()
-            db_session.add(User(name, email, session['openid']))
-            db_session.commit()
-            return redirect(oid.get_next_url())
-    return render_template('create_profile.html', next_url=oid.get_next_url())
-
-
-@toolapp.route('/profile', methods=['GET', 'POST'])
-def edit_profile():
-    """Updates a profile"""
-    if g.user is None:
-        abort(401)
-    form = dict(name=g.user.name, email=g.user.email)
-    if request.method == 'POST':
-        if 'delete' in request.form:
-            db_session.delete(g.user)
-            db_session.commit()
-            session['openid'] = None
-            flash(u'Profile deleted')
-            return redirect(url_for('index'))
-        form['name'] = request.form['name']
-        form['email'] = request.form['email']
-        # form['test_word'] = ""
-        if not form['name']:
-            flash(u'Error: you have to provide a name')
-        elif '@' not in form['email']:
-            flash(u'Error: you have to enter a valid email address')
-        else:
-            flash(u'Profile successfully created')
-            g.user.name = form['name']
-            g.user.email = form['email']
-            # g.user.test_word = form['test_word']
-            db_session.commit()
-            return redirect(url_for('edit_profile'))
-    return render_template('edit_profile.html', form=form)
+# @toolapp.route('/create-profile', methods=['GET', 'POST'])
+# def create_profile():
+#     """If this is the user's first login, the create_or_login function
+#     will redirect here so that the user can set up his profile.
+#     """
+#     if g.user is not None or 'openid' not in session:
+#         return redirect(url_for('index'))
+#     if request.method == 'POST':
+#         name = request.form['name']
+#         email = request.form['email']
+#         # test_word = ""
+#         # avatar_url = User.avatar(128)
+#
+#         if not name:
+#             flash(u'Error: you have to provide a name')
+#         elif '@' not in email:
+#             flash(u'Error: you have to enter a valid email address')
+#         else:
+#             flash(u'Profile successfully created')
+#             # init_db()
+#             db_session.add(User(name, email, session['openid']))
+#             db_session.commit()
+#             return redirect(oid.get_next_url())
+#     return render_template('create_profile.html', next_url=oid.get_next_url())
+#
+#
+# @toolapp.route('/profile', methods=['GET', 'POST'])
+# def edit_profile():
+#     """Updates a profile"""
+#     if g.user is None:
+#         abort(401)
+#     form = dict(name=g.user.name, email=g.user.email)
+#     if request.method == 'POST':
+#         if 'delete' in request.form:
+#             db_session.delete(g.user)
+#             db_session.commit()
+#             session['openid'] = None
+#             flash(u'Profile deleted')
+#             return redirect(url_for('index'))
+#         form['name'] = request.form['name']
+#         form['email'] = request.form['email']
+#         # form['test_word'] = ""
+#         if not form['name']:
+#             flash(u'Error: you have to provide a name')
+#         elif '@' not in form['email']:
+#             flash(u'Error: you have to enter a valid email address')
+#         else:
+#             flash(u'Profile successfully created')
+#             g.user.name = form['name']
+#             g.user.email = form['email']
+#             # g.user.test_word = form['test_word']
+#             db_session.commit()
+#             return redirect(url_for('edit_profile'))
+#     return render_template('edit_profile.html', form=form)
 
 
 @toolapp.route('/logout')
@@ -144,10 +145,15 @@ def before_request():
     if 'openid' in session:
         g.user = User.query.filter_by(openid=session['openid']).first()
 
+    if g.user.is_authenticated:
+        g.user.last_seen = datetime.utcnow()
+        db.session.add(g.user)
+        db.session.commit()
+
 
 @toolapp.after_request
 def after_request(response):
-    db_session.remove()
+    db.session.remove()
     return response
 
 
@@ -156,32 +162,36 @@ def load_user(uid):
     return User.query.get(int(uid))
 
 
-# @toolapp.route('/login/', methods=['GET', 'POST'])
-# def login():
-#     form = LoginForm()
-#     if form.validate_on_submit():
-#         flash('Login requested for OpenID="' + form.openid.data + '", remember_me=' + str(form.remember_me.data))
-#         return redirect('/index')
-#     return render_template('login.html',
-#                            title='Sign In',
-#                            form=form,
-#                            providers=toolapp.config['OPENID_PROVIDERS'])
+@toolapp.route("/user/<nickname>/")
+@login_required
+def user(nickname):
+    query_user = User.query.filter_by(nickname=nickname).first()
+    if query_user is None:
+        flash("User: " + nickname + ' Not Found')
+        return redirect(url_for('index'))
+
+    posts = [
+        {'author': query_user, 'body': 'Test post #1'},
+        {'author': query_user, 'body': 'Test post #2'}]
+    return render_template('user.html', user=query_user, posts=posts)
 
 
+@toolapp.route('/edit/', methods=['GET', 'POST'])
+@login_required
+def edit():
+    form = EditForm()
+    if form.validate_on_submit():
+        g.user.nickname = form.nickname.data
+        g.user.about_me = form.about_me.data
+        db.session.add(g.user)
+        db.session.commit()
+        flash('Your changes have been saved.')
+        return redirect(url_for('edit'))
+    else:
+        form.nickname.data = g.user.nickname
+        form.about_me.data = g.user.about_me
+    return render_template('edit_profile.html', form=form)
 
-#
-# @toolapp.route("/user/<nickname>/")
-# @login_required
-# def user(nickname):
-#     query_user = User.query.filter_by(nickname=nickname).first()
-#     if query_user is None:
-#         flash("User: " + nickname + ' Not Found')
-#         return redirect(url_for('index'))
-#
-#     posts = [
-#         {'author': user, 'body': 'Test post #1'},
-#         {'author': user, 'body': 'Test post #2'}]
-#     return render_template('user.html', user=user, posts=posts)
 
 
 

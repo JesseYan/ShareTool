@@ -15,50 +15,18 @@ from app import engine
 from app import db
 
 
-# class User(db.Model):
-#
-#     __tablename__ = 'users'
-#
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(60))
-#     email = db.Column(db.String(200))
-#     openid = db.Column(db.String(200))
-#     test_word = db.Column(db.String(200), default="")
-#     avatar_url = db.Column(db.String(200), default="")
-#
-#     # Base.metadata.create_all(engine)
-#
-#     def __init__(self, name, email, openid, test_word, avatar_url):
-#         self.name = name
-#         self.email = email
-#         self.openid = openid
-#         self.test_word = test_word
-#         self.avatar_url = avatar_url
-#
-#     def avatar(self, size):
-#         return 'http://www.gravatar.com/avatar/' + md5(self.email).hexdigest() + '?d=mm&s=' + str(size)
-
-
-#
-# class User(db.Model):
-#     __tablename__ = 'users'
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(60))
-#     email = db.Column(db.String(200))
-#     openid = db.Column(db.String(200))
-#
-#     def __init__(self, name, email, openid):
-#         self.name = name
-#         self.email = email
-#         self.openid = openid
-
-
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     openid = db.Column(db.String(200))
     nickname = db.Column(db.String(64))
     email = db.Column(db.String(120))
     posts = db.relationship('Post', backref='author', lazy='dynamic')
+    about_me = db.Column(db.String(140))
+    last_seen = db.Column(db.DateTime)
+
+
+    def avatar(self, size):
+        return 'http://www.gravatar.com/avatar/' + md5(self.email).hexdigest() + '?d=mm&s=' + str(size)
 
     def is_authenticated(self):
         return True

@@ -1,6 +1,13 @@
 .gitignore
-./app/*yc
-venv/*
 .idea/
-app/database.pyc
+
+#environment
+venv/*
+db_repository/versions/*
+
+#tmp files
 tmp/*
+
+#python
+app/*.pyc
+.pyc

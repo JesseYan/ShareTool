@@ -15,80 +15,60 @@ from app.database import init_db
 
 @toolapp.route('/')
 @toolapp.route('/index/', methods=['GET', 'POST'])
-# @login_required
+@login_required
 def index():
     print "="*20
     with toolapp.test_request_context():
         print url_for("index")
-    # user = g.user
-    # posts = [
-    #     {
-    #         'author': {'nickname': 'John'},
-    #         'body': 'Beautiful day in Portland!'
-    #     },
-    #     {
-    #         'author': {'nickname': 'Susan'},
-    #         'body': 'The Avengers movie was so cool!'
-    #     }
-    # ]
-    # return render_template('index.html', title='Home', user=user, posts=posts)
-    return render_template('index.html')
+    user = g.user
+    posts = [
+        {
+            'author': {'nickname': 'John'},
+            'body': 'Beautiful day in Portland!'
+        },
+        {
+            'author': {'nickname': 'Susan'},
+            'body': 'The Avengers movie was so cool!'
+        }
+    ]
+    return render_template('index.html', title='Home', user=user, posts=posts)
 
 
 @toolapp.route('/login/', methods=['POST', 'GET'])
 @oid.loginhandler
 def login():
-    # if g.user is not None and g.user.is_authenticated:
-    #     return redirect(url_for('index'))
-    # form = LoginForm()
-    # if form.validate_on_submit():
-    #     session['remeber_me'] = form.remember_me.data
-    #     print '-------try_login openid data'
-    #     return oid.try_login(form.openid.data, ask_for=['nickname', 'email'])
-    #
-    # return render_template('login.html',
-    #                        title='Sign in',
-    #                        form=form,
-    #                        providers=toolapp.config['OPENID_PROVIDERS'])
-    """Does the login via OpenID.  Has to call into `oid.try_login`
-    to start the OpenID machinery.
-    """
-    # # if we are already logged in, go back to were we came from
-    if g.user is not None:
-        return redirect(oid.get_next_url())
+    if g.user is not None and g.user.is_authenticated:
+        return redirect(url_for('index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        session['remeber_me'] = form.remember_me.data
+        return oid.try_login(form.openid.data, ask_for=['nickname', 'email'])
 
-    if request.method == 'POST':
-        openid = request.form.get('openid')
-        if openid:
-            pape_req = pape.Request([])
-            return oid.try_login(openid, ask_for=['email', 'nickname'],
-                                         ask_for_optional=['fullname'],
-                                         extensions=[pape_req])
-
-    return render_template('login.html', next=oid.get_next_url(), error=oid.fetch_error())
+    return render_template('login.html',
+                           title='Sign in',
+                           form=form,
+                           providers=toolapp.config['OPENID_PROVIDERS'])
 
 
 @oid.after_login
-def create_or_login(resp):
-    """This is called when login with OpenID succeeded and it's not
-    necessary to figure out if this is the users's first login or not.
-    This function has to redirect otherwise the user will be presented
-    with a terrible URL which we certainly don't want.
-    """
-    print '***************'
-    session['openid'] = resp.identity_url
-    if 'pape' in resp.extensions:
-        pape_resp = resp.extensions['pape']
-        session['auth_time'] = pape_resp.auth_time
-    user = User.query.filter_by(openid=resp.identity_url).first()
-    if user is not None:
-        flash(u'Successfully signed in')
-        g.user = user
-        return redirect(oid.get_next_url())
-    return redirect(url_for('create_profile',
-                            next=oid.get_next_url(),
-                            name=resp.fullname or resp.nickname,
-                            email=resp.email))
+def after_login(resp):
+    if resp.email is None or resp.email == "":
+        flash('Invalid login. Please try again.')
+        return redirect(url_for('login'))
+    user = User.query.filter_by(email=resp.email).first()
+    if user is None:
+        nickname = resp.nickname
+        if nickname is None or nickname == "":
+            nickname = resp.email.split('@')[0]
+        user = User(nickname=nickname, email=resp.email)
+        db.session.add(user)
+        db.session.commit()
+    remember_me = False
+    if 'remember_me' in session:
+        remember_me = session['remember_me']
+        session.pop('remember_me', None)
+    login_user(user, remember=remember_me)
+    return redirect(request.args.get('next') or url_for('index'))
 
 
 @toolapp.route('/create-profile', methods=['GET', 'POST'])
@@ -102,7 +82,7 @@ def create_profile():
         name = request.form['name']
         email = request.form['email']
         # test_word = ""
-        # avatar_url = request.form['avatar_url']
+        # avatar_url = User.avatar(128)
 
         if not name:
             flash(u'Error: you have to provide a name')
@@ -149,17 +129,18 @@ def edit_profile():
 
 @toolapp.route('/logout')
 def logout():
-    # logout_user()
-    # return redirect(url_for('index'))
-    session.pop('openid', None)
+    logout_user()
     flash(u'You have been signed out')
-    # return redirect(oid.get_next_url())
     return redirect(url_for('index'))
+    # session.pop('openid', None)
+    # flash(u'You have been signed out')
+    # # return redirect(oid.get_next_url())
+    # return redirect(url_for('index'))
 
 
 @toolapp.before_request
 def before_request():
-    g.user = None
+    g.user = current_user
     if 'openid' in session:
         g.user = User.query.filter_by(openid=session['openid']).first()
 
@@ -169,10 +150,10 @@ def after_request(response):
     db_session.remove()
     return response
 
-#
-# @m_login_manager.user_loader
-# def load_user(uid):
-#     return User.query.get(int(uid))
+
+@m_login_manager.user_loader
+def load_user(uid):
+    return User.query.get(int(uid))
 
 
 # @toolapp.route('/login/', methods=['GET', 'POST'])
@@ -186,46 +167,6 @@ def after_request(response):
 #                            form=form,
 #                            providers=toolapp.config['OPENID_PROVIDERS'])
 
-# @oid.after_login
-# def after_login(resp):
-#     # print '============after login11111111111'
-#     # if resp.email is None or resp.email == "":
-#     #     flash('Invalid login. Please try again.')
-#     #     return redirect(url_for('login'))
-#     # user = User.query.filter_by(email=resp.email).first()
-#     # if user is None:
-#     #     nickname = resp.nickname
-#     #     if nickname is None or nickname == "":
-#     #         nickname = resp.email.split('@')[0]
-#     #     user = User(nickname=nickname, email=resp.email)
-#     #     db.session.add(user)
-#     #     db.session.commit()
-#     # remember_me = False
-#     # if 'remember_me' in session:
-#     #     remember_me = session['remember_me']
-#     #     session.pop('remember_me', None)
-#     # login_user(user, remember=remember_me)
-#     # print '============after login'
-#     # return redirect(request.args.get('next') or url_for('index'))
-#     """This is called when login with OpenID succeeded and it's not
-#     necessary to figure out if this is the users's first login or not.
-#     This function has to redirect otherwise the user will be presented
-#     with a terrible URL which we certainly don't want.
-#     """
-#     session['openid'] = resp.identity_url
-#     print '********after login------'
-#     if 'pape' in resp.extensions:
-#         pape_resp = resp.extensions['pape']
-#         session['auth_time'] = pape_resp.auth_time
-#     user = User.query.filter_by(openid=resp.identity_url).first()
-#     if user is not None:
-#         flash(u'Successfully signed in')
-#         g.user = user
-#         return redirect(oid.get_next_url())
-#     return redirect(url_for('create_profile',
-#                             next=oid.get_next_url(),
-#                             name=resp.fullname or resp.nickname,
-#                             email=resp.email))
 
 
 #

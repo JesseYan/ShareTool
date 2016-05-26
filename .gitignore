@@ -10,4 +10,4 @@ tmp/*
 
 #python
 app/*.pyc
-.pyc
+*.pyc

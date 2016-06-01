@@ -5,34 +5,40 @@
 __author__ = 'jesse'
 
 from app import toolapp, m_login_manager, oid, db
-from .models import User
+from .models import User, Post
 from flask import url_for, g, redirect, session, render_template, flash, request, abort
 from flask_login import login_user, logout_user, current_user, login_required
-from .forms import LoginForm, EditForm
+from .forms import LoginForm, EditForm, PostForm
 from openid.extensions import pape
 from app.database import init_db
 from datetime import datetime
+import config
 
 
 @toolapp.route('/')
 @toolapp.route('/index/', methods=['GET', 'POST'])
+@toolapp.route('/index/<int:page>/', methods=['GET', 'POST'])
 @login_required
-def index():
+def index(page=1):
     print "="*20
     with toolapp.test_request_context():
         print url_for("index")
-    user = g.user
-    posts = [
-        {
-            'author': {'nickname': 'John'},
-            'body': 'Beautiful day in Portland!'
-        },
-        {
-            'author': {'nickname': 'Susan'},
-            'body': 'The Avengers movie was so cool!'
-        }
-    ]
-    return render_template('index.html', title='Home', user=user, posts=posts)
+
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Post(body=form.post.data, timestamp=datetime.utcnow(), author=current_user)
+
+        db.session.add(post)
+        db.session.commit()
+        flash('your post now is live!')
+
+        return redirect(url_for('index'))
+
+    posts = current_user.followed_posts().paginate(page, config.POSTS_PER_PAGE, False)
+    # flash(g.user.followed_posts().all())
+
+    # posts = g.user.followed_posts().all()
+    return render_template('index.html', title='Home', form=form, posts=posts)
 
 
 @toolapp.route('/login/', methods=['POST', 'GET'])
@@ -54,7 +60,7 @@ def login():
 @oid.after_login
 def after_login(resp):
     if resp.email is None or resp.email == "":
-        flash('Invalid login. Please try again.')
+        flash('Invalid login. email is null, Please try again.')
         return redirect(url_for('login'))
     user = User.query.filter_by(email=resp.email).first()
     if user is None:
@@ -206,16 +212,18 @@ def load_user(uid):
 
 
 @toolapp.route("/user/<nickname>/")
+@toolapp.route("/user/<nickname>/<int:page>/")
 @login_required
-def user(nickname):
+def user(nickname, page=1):
     query_user = User.query.filter_by(nickname=nickname).first()
     if query_user is None:
         flash("User: " + nickname + ' Not Found')
         return redirect(url_for('index'))
 
-    posts = [
-        {'author': query_user, 'body': 'Test post #1'},
-        {'author': query_user, 'body': 'Test post #2'}]
+    # posts = [
+    #     {'author': query_user, 'body': 'Test post #1'},
+    #     {'author': query_user, 'body': 'Test post #2'}]
+    posts = query_user.posts.paginate(page=page, per_page=config.POSTS_PER_PAGE, error_out=False)
     return render_template('user.html', user=query_user, posts=posts)
 
 

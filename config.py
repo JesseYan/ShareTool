@@ -22,3 +22,5 @@ OPENID_PROVIDERS = [
     {'name': 'MyOpenID', 'url': 'https://www.myopenid.com'},
     {'name': 'openid.org', 'url': 'http://<username>.openid.org.cn/'}]
 
+# pagination
+POSTS_PER_PAGE = 5

@@ -12,3 +12,5 @@ Flask study program: MicroBlog web system
 ** Day-4: http://mp.weixin.qq.com/s?__biz=MjM5MDQ1NTA1MQ==&mid=521107689&idx=1&sn=90b734318b82155d864baa3789cfd51d#rd
 
 ** Day-5: http://mp.weixin.qq.com/s?__biz=MjM5MDQ1NTA1MQ==&mid=521107695&idx=1&sn=db82ec36e9a6559bf367a79831328e1a#rd
+
+** Day-6: http://mp.weixin.qq.com/s?__biz=MjM5MDQ1NTA1MQ==&mid=2668591348&idx=1&sn=f03a1efd2cdea983631a42b52477b296#rd

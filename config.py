@@ -24,3 +24,16 @@ OPENID_PROVIDERS = [
 
 # pagination
 POSTS_PER_PAGE = 5
+
+# email server
+MAIL_SERVER = 'smtp.googlemail.com'
+MAIL_PORT = 465
+MAIL_USE_TLS = False
+MAIL_USE_SSL = True
+# print 'mail_username', os.environ.get('MAIL_USERNAME'), '================'
+
+MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+
+# administrator listfrom config import ADMINS
+ADMINS = ['jesseyan1990@gmail.com', '1615832651@qq.com']

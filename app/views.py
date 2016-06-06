@@ -13,6 +13,7 @@ from openid.extensions import pape
 from app.database import init_db
 from datetime import datetime
 import config
+from emails import follower_notification
 
 
 @toolapp.route('/')
@@ -62,8 +63,8 @@ def after_login(resp):
     if resp.email is None or resp.email == "":
         flash('Invalid login. email is null, Please try again.')
         return redirect(url_for('login'))
-    user = User.query.filter_by(email=resp.email).first()
-    if user is None:
+    query_user = User.query.filter_by(nickname=resp.nickname).first()
+    if query_user is None:
         nickname = resp.nickname
         if nickname is None or nickname == "":
             nickname = resp.email.split('@')[0]
@@ -77,7 +78,7 @@ def after_login(resp):
     if 'remember_me' in session:
         remember_me = session['remember_me']
         session.pop('remember_me', None)
-    login_user(user, remember=remember_me)
+    login_user(query_user, remember=remember_me)
     return redirect(request.args.get('next') or url_for('index'))
 
 
@@ -98,6 +99,7 @@ def follow(nickname):
     db.session.add(u)
     db.session.commit()
     flash('You are now following ' + nickname + '!')
+    follower_notification(user, g.user)
     return redirect(url_for('user', nickname=nickname))
 
 

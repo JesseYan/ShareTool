@@ -9,5 +9,9 @@ db_repository/versions/*
 tmp/*
 
 #python
-app/*.pyc
+#app/*.pyc
 *.pyc
+
+# db files
+*.db
+#toolapp.db

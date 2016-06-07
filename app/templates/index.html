@@ -3,24 +3,28 @@
 
 {% block content %}
 <h1>Hi, {{g.user.nickname}}!</h1>
-<form action="" method="post" name="post">
+<form class="form-horizontal" action="" method="post" name="post">
     {{form.hidden_tag()}}
-    <table>
-        <tr>
-            <td>Say something:</td>
-            <td>{{ form.post(size = 30, maxlength = 140) }}</td>
-            <td>
+    <div class="control-group">
+        <label class="control-label" for="inputContent">Say something:</label>
+        <div class="controls">
+            <!--<textarea id="inputContent" rows="3">{{ form.post(size = 30, maxlength = 140) }}</textarea>-->
+            <td id="inputContent">{{ form.post(size = 30, maxlength = 140) }}</td>
+        </div>
+        <td>
             {% for error in form.errors.post %}
-            <span style="color: red;">[{{error}}]</span><br>
+                <span style="color: red;">[{{error}}]</span><br>
             {% endfor %}
-            </td>
-        </tr>
-        <tr>
-            <td></td>
-            <td><input type="submit" value="Post!"></td>
-            <td></td>
-        </tr>
-    </table>
+        </td>
+    </div>
+
+
+        <div class="control-group">
+            <div class="controls">
+              <button type="submit" class="btn btn-primary">Post</button>
+            </div>
+        </div>
+
 </form>
 <!-- posts is a Paginate object -->
 {% for post in posts.items %}

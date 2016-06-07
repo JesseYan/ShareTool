@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import create_engine
 from flask_mail import Mail
+from momentjs import momentjs
 
 
 toolapp = Flask(__name__)
@@ -29,5 +30,8 @@ db_session = scoped_session(sessionmaker(autocommit=False,
                                          bind=engine))
 
 mail = Mail(toolapp)
+
+# set jinja-momentjs = my momentjs
+toolapp.jinja_env.globals['momentjs'] = momentjs
 
 from app import views, models
